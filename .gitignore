@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Generated output (keep the bundled sample, ignore user runs)
+outputs/2*/
+outputs/*.zip
+
+# Local secrets / overrides
+.env
+.env.local
+*.local
+
+# Build artefacts
+build/
+dist/

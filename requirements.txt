@@ -1,0 +1,22 @@
+Flask>=3.0.0
+
+# ---------------------------------------------------------------------------
+# Optional — LLM hybrid mode. Pick ONE provider.
+# The system runs fully without either (deterministic template path).
+# ---------------------------------------------------------------------------
+
+# Option A — Google Gemini (FREE, recommended)
+#   1. Get a free key at https://aistudio.google.com/app/apikey
+#   2. pip install google-genai          (NEW, supported)
+#      — or, legacy support:  pip install google-generativeai
+#      The system auto-detects whichever is installed.
+#   3. set GOOGLE_API_KEY in your environment
+#   Free tier as of writing: 15 req/min, 1500 req/day on gemini-2.0-flash.
+#   No credit card required.
+# google-genai>=0.3.0
+
+# Option B — Anthropic Claude (paid, highest quality)
+#   1. Get a key at https://console.anthropic.com
+#   2. pip install anthropic
+#   3. set ANTHROPIC_API_KEY in your environment
+# anthropic>=0.40.0

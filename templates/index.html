@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>youtube-content-agent</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #161a22;
+      --ink: #e8ecf2;
+      --muted: #8a93a4;
+      --accent: #6da7ff;
+      --accent-soft: #2a3a5c;
+      --ok: #6fd49a;
+      --err: #ff7a7a;
+      --line: #232936;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.55 -apple-system, "Segoe UI", system-ui, sans-serif;
+    }
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 56px 24px 96px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0 0 6px;
+    }
+    .lede { color: var(--muted); margin: 0 0 32px; }
+    form {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .field { margin-bottom: 16px; }
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    input[type="text"], select {
+      width: 100%;
+      background: #0c0f15;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px 14px;
+      font: inherit;
+      outline: none;
+    }
+    input[type="text"]:focus, select:focus { border-color: var(--accent); }
+    .row { display: flex; gap: 12px; align-items: center; }
+    button {
+      background: var(--accent);
+      color: #0a1226;
+      border: none;
+      border-radius: 8px;
+      padding: 11px 18px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(1.08); }
+    button.secondary {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    button.secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .llm-pill {
+      display: inline-block;
+      margin-left: auto;
+      padding: 3px 9px;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+    .llm-pill.on {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #cfe0ff;
+    }
+    .status {
+      margin-top: 24px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .status.ok { border-color: #2c4a3a; }
+    .status.err { border-color: #4a2c2c; }
+    .status h3 {
+      margin: 0 0 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ok);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .status.err h3 { color: var(--err); }
+    .status p { margin: 4px 0; }
+    .path {
+      font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+      font-size: 13px;
+      background: #0c0f15;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--ink);
+      word-break: break-all;
+    }
+    .badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 6px;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: var(--accent-soft);
+      color: #cfe0ff;
+      border-radius: 4px;
+    }
+    .file-list {
+      margin: 14px 0 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: #0c0f15;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+    .file-row .name {
+      font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+      font-size: 13px;
+      flex: 1;
+      color: var(--ink);
+    }
+    .file-row .actions { display: flex; gap: 6px; }
+    .viewer {
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0a0d12;
+      overflow: hidden;
+    }
+    .viewer.hidden { display: none; }
+    .viewer-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #0c0f15;
+    }
+    .viewer-head .vname {
+      font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+      font-size: 12px;
+      color: var(--muted);
+      flex: 1;
+    }
+    .viewer-body {
+      max-height: 60vh;
+      overflow: auto;
+      padding: 14px 16px;
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+    .viewer-body.md {
+      font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+      font-size: 12.5px;
+      white-space: pre-wrap;
+      color: var(--muted);
+    }
+    .viewer-body.text { color: var(--ink); white-space: pre-wrap; }
+    .toast {
+      position: fixed;
+      bottom: 30px; right: 30px;
+      background: var(--ok); color: #0a1226;
+      padding: 10px 16px; border-radius: 8px;
+      font-weight: 600; font-size: 13px;
+      opacity: 0; transform: translateY(10px);
+      transition: opacity 200ms, transform 200ms;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    footer { margin-top: 40px; color: var(--muted); font-size: 12px; }
+    footer p { line-height: 1.6; }
+    footer code { color: var(--ink); }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    footer a:hover { text-decoration: underline; }
+    .author-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .author-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      color: #0a1226;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0.02em;
+      flex-shrink: 0;
+    }
+    .author-meta { flex: 1; min-width: 0; }
+    .author-name {
+      color: var(--ink);
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+    .author-links {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .author-links .dot { margin: 0 6px; opacity: 0.5; }
+    .star-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 7px 12px;
+      background: #0c0f15;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--ink) !important;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: border-color 150ms;
+    }
+    .star-btn:hover {
+      border-color: var(--accent);
+      text-decoration: none !important;
+    }
+    @media (max-width: 600px) {
+      .author-card { flex-wrap: wrap; }
+      .star-btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="row">
+      <h1>youtube-content-agent</h1>
+      <span class="llm-pill {% if llm_available %}on{% endif %}" id="llm-pill">
+        {{ llm_label }}
+      </span>
+      <button type="button" class="secondary" id="test-llm-btn" style="margin-left: 8px;">
+        Test connection
+      </button>
+      <button type="button" class="secondary" id="list-models-btn" style="margin-left: 4px;">
+        List models
+      </button>
+    </div>
+    <div id="llm-test-result" style="display:none; margin-top:10px;"></div>
+    <div id="models-list-result" style="display:none; margin-top:10px;"></div>
+    <p class="lede">Topic in. Production pack out. Length-aware. CapCut-ready.</p>
+
+    <form method="post" action="/generate" autocomplete="off">
+      <div class="field">
+        <label for="topic">Topic</label>
+        <input id="topic" name="topic" type="text"
+               placeholder="e.g. Why undersea cables quietly control the internet"
+               value="{{ topic|default('', true) }}" required>
+      </div>
+
+      <div class="field field-grid">
+        <div>
+          <label for="tone">Tone</label>
+          <select id="tone" name="tone">
+            {% for t in tones %}
+              <option value="{{ t }}"{% if t == selected_tone %} selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="video_length">Video length</label>
+          <select id="video_length" name="video_length">
+            {% for L in lengths %}
+              <option value="{{ L }}"{% if L == selected_length %} selected{% endif %}>
+                {% if L == 'short' %}short — 3–4 min{% endif %}
+                {% if L == 'standard' %}standard — 6–8 min{% endif %}
+                {% if L == 'deep_dive' %}deep_dive — 10–12 min{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <button type="submit">Generate pack</button>
+        <button type="button" class="secondary" id="reset-btn">Reset</button>
+      </div>
+    </form>
+
+    {% if error %}
+      <div class="status err" role="alert">
+        <h3>Error</h3>
+        <p>{{ error }}</p>
+      </div>
+    {% endif %}
+
+    {% if result %}
+      <div class="status ok">
+        <h3>
+          Pack ready
+          {% if result.used_seed %}<span class="badge">curated</span>{% endif %}
+          {% if result.llm_call_succeeded %}
+            <span class="badge">script: {{ result.llm_provider }}</span>
+          {% elif result.used_llm %}
+            <span class="badge" title="Provider was configured but the API call failed; the deterministic template was used as fallback.">script: template (llm fallback)</span>
+          {% else %}
+            <span class="badge">script: template</span>
+          {% endif %}
+          <span class="badge">{{ result.video_length }}</span>
+        </h3>
+        <p style="font-size: 12px; color: var(--muted); margin-top: 4px;">
+          script source: <code>{{ result.script_source }}</code> &middot;
+          titles source: <code>{{ result.titles_source }}</code>
+        </p>
+        <p>Latest output folder:</p>
+        <div class="path">{{ result.folder_abs }}</div>
+        <p style="margin-top:10px;">Relative: <code>{{ result.folder_rel }}</code></p>
+
+        <ul class="file-list" id="files" data-folder="{{ result.folder_name }}">
+          {% for f in result.files %}
+            <li class="file-row" data-file="{{ f }}">
+              <span class="name">{{ f }}</span>
+              <div class="actions">
+                <button type="button" class="secondary" data-action="view">View</button>
+                <button type="button" class="secondary" data-action="md">MD</button>
+                <button type="button" class="secondary" data-action="copy">Copy</button>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+
+        <div class="viewer hidden" id="viewer">
+          <div class="viewer-head">
+            <span class="vname" id="vname"></span>
+            <button type="button" class="secondary" id="vclose">Close</button>
+          </div>
+          <div class="viewer-body" id="vbody"></div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const folder = document.getElementById('files').dataset.folder;
+          const viewer = document.getElementById('viewer');
+          const vname = document.getElementById('vname');
+          const vbody = document.getElementById('vbody');
+          const vclose = document.getElementById('vclose');
+          const toast = makeToast();
+
+          // Cache file content so re-clicks don't re-fetch.
+          const cache = {};
+
+          async function fetchFile(filename) {
+            if (cache[filename]) return cache[filename];
+            const res = await fetch(`/file/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            cache[filename] = json.content;
+            return json.content;
+          }
+
+          // Minimal markdown → clean text. Strips formatting marks but
+          // keeps the readable body. Adequate for a "View" pane.
+          function mdToCleanText(md) {
+            return md
+              .replace(/```[\s\S]*?```/g, '')
+              .replace(/^#{1,6}\s+/gm, '')
+              .replace(/\*\*(.+?)\*\*/g, '$1')
+              .replace(/\*(.+?)\*/g, '$1')
+              .replace(/__(.+?)__/g, '$1')
+              .replace(/_(.+?)_/g, '$1')
+              .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+              .replace(/`([^`]+)`/g, '$1')
+              .replace(/^>\s?/gm, '')
+              .replace(/^[\*\-]\s+/gm, '• ')
+              .replace(/^\d+\.\s+/gm, '');
+          }
+
+          async function showFile(filename, mode) {
+            try {
+              const content = await fetchFile(filename);
+              vname.textContent = `${filename}  —  ${mode === 'md' ? 'raw markdown' : 'clean text'}`;
+              vbody.className = `viewer-body ${mode === 'md' ? 'md' : 'text'}`;
+              vbody.textContent = mode === 'md' ? content : mdToCleanText(content);
+              viewer.classList.remove('hidden');
+              viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (err) {
+              showToast(`Failed to load ${filename}`);
+            }
+          }
+
+          async function copyFile(filename) {
+            try {
+              const content = await fetchFile(filename);
+              await navigator.clipboard.writeText(content);
+              showToast(`Copied ${filename}`);
+            } catch (err) {
+              showToast(`Copy failed`);
+            }
+          }
+
+          document.getElementById('files').addEventListener('click', (ev) => {
+            const btn = ev.target.closest('button[data-action]');
+            if (!btn) return;
+            const row = btn.closest('.file-row');
+            const filename = row.dataset.file;
+            const action = btn.dataset.action;
+            if (action === 'view') showFile(filename, 'view');
+            else if (action === 'md') showFile(filename, 'md');
+            else if (action === 'copy') copyFile(filename);
+          });
+
+          vclose.addEventListener('click', () => viewer.classList.add('hidden'));
+
+          function makeToast() {
+            const el = document.createElement('div');
+            el.className = 'toast';
+            document.body.appendChild(el);
+            return el;
+          }
+          function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 1600);
+          }
+        })();
+      </script>
+    {% endif %}
+
+    <footer>
+      <p style="margin: 0 0 14px;">
+        No external APIs required. Set <code>GOOGLE_API_KEY</code> + install <code>google-genai</code>
+        (free) or <code>ANTHROPIC_API_KEY</code> + install <code>anthropic</code> (paid)
+        to enable LLM hybrid mode. Hit <code>/health/llm</code> to verify the
+        connection. All output written to <code>./outputs/</code>.
+      </p>
+
+      <div class="author-card">
+        <div class="author-avatar">PS</div>
+        <div class="author-meta">
+          <div class="author-name">Built by <strong>Prashant Singh</strong></div>
+          <div class="author-links">
+            <a href="https://github.com/prashantsinghmangat/youtube-content-agent"
+               target="_blank" rel="noopener noreferrer">GitHub repo</a>
+            <span class="dot">·</span>
+            <a href="https://github.com/prashantsinghmangat"
+               target="_blank" rel="noopener noreferrer">@prashantsinghmangat</a>
+            <span class="dot">·</span>
+            <a href="https://prashantsinghmangat.netlify.app/"
+               target="_blank" rel="noopener noreferrer">Portfolio</a>
+          </div>
+        </div>
+        <a href="https://github.com/prashantsinghmangat/youtube-content-agent"
+           target="_blank" rel="noopener noreferrer"
+           class="star-btn"
+           title="Star the repo on GitHub">★ Star on GitHub</a>
+      </div>
+    </footer>
+
+    <script>
+      // "Reset" button — clears the form and hides every result panel.
+      // Pure client-side; no page reload, no env-var loss.
+      (function () {
+        const resetBtn = document.getElementById('reset-btn');
+        if (!resetBtn) return;
+        resetBtn.addEventListener('click', () => {
+          const form = document.querySelector('form');
+          if (form) form.reset();
+
+          // Hide every server-rendered or dynamically-inserted result block.
+          const blocksToHide = [
+            'status',                  // pack-ready / error panels (class)
+            'viewer',                  // file viewer (id)
+            'llm-test-result',         // Test connection panel (id)
+            'models-list-result',      // List models panel (id)
+          ];
+          blocksToHide.forEach(sel => {
+            // Try id first
+            const byId = document.getElementById(sel);
+            if (byId) byId.style.display = 'none';
+            // Then class (for elements like .status)
+            document.querySelectorAll('.' + sel).forEach(el => {
+              el.style.display = 'none';
+            });
+          });
+
+          // Re-focus the topic input for fast next entry.
+          const topic = document.getElementById('topic');
+          if (topic) topic.focus();
+        });
+      })();
+
+      // "Test connection" button — pings /health/llm and renders the result.
+      (function () {
+        const btn = document.getElementById('test-llm-btn');
+        const out = document.getElementById('llm-test-result');
+        if (!btn) return;
+
+        function escapeHtml(s) {
+          return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        }
+
+        function row(label, value, ok) {
+          const dot = ok ? '✓' : '✗';
+          const color = ok ? 'var(--ok)' : 'var(--err)';
+          return `<div style="display:flex; gap:8px; align-items:center;">
+                    <span style="color:${color}; width:14px;">${dot}</span>
+                    <span style="color:var(--muted); width:200px;">${label}</span>
+                    <code style="color:var(--ink);">${value}</code>
+                  </div>`;
+        }
+
+        // ---- "List models" button ------------------------------------
+        const listBtn = document.getElementById('list-models-btn');
+        const listOut = document.getElementById('models-list-result');
+
+        listBtn.addEventListener('click', async () => {
+          listBtn.disabled = true;
+          listBtn.textContent = 'Listing...';
+          listOut.style.display = 'block';
+          listOut.innerHTML = '<div style="color:var(--muted);">Calling /health/models...</div>';
+
+          try {
+            const res = await fetch('/health/models');
+            const j = await res.json();
+
+            if (!j.models) {
+              listOut.innerHTML = `
+                <div class="status err">
+                  <h3>Could not list models</h3>
+                  <code style="color:var(--ink); white-space:pre-wrap;">${escapeHtml(j.last_error || 'unknown error')}</code>
+                </div>`;
+              return;
+            }
+
+            const generateCapable = j.models.filter(m => m.supports_generate);
+
+            const rows = j.models.map(m => {
+              const ok = m.supports_generate;
+              const dot = ok ? '✓' : '✗';
+              const color = ok ? 'var(--ok)' : 'var(--muted)';
+              const cleanName = m.name.replace(/^models\//, '');
+              const isCurrent = (cleanName === j.current_model || m.name === j.current_model);
+              const currentBadge = isCurrent
+                ? ' <span style="background:var(--accent-soft); color:#cfe0ff; padding:0 6px; border-radius:3px; font-size:10px;">CURRENT</span>'
+                : '';
+              return `<div style="display:flex; gap:8px; align-items:center; padding:3px 0;">
+                        <span style="color:${color}; width:14px;">${dot}</span>
+                        <code style="color:var(--ink); flex:1;">${escapeHtml(cleanName)}${currentBadge}</code>
+                        <span style="color:var(--muted); font-size:11px;">${escapeHtml(m.display_name || '')}</span>
+                      </div>`;
+            }).join('');
+
+            listOut.innerHTML = `
+              <div class="status ok">
+                <h3>${generateCapable.length} of ${j.models.length} models support generateContent</h3>
+                <p style="color:var(--muted); font-size:12px; margin:4px 0 10px;">
+                  To switch model: stop the server, run
+                  <code>$env:GEMINI_MODEL = "name-from-list"</code>,
+                  then <code>python app.py</code> again.
+                </p>
+                <div style="font-family:ui-monospace,Consolas,monospace; font-size:12px; max-height:50vh; overflow:auto;">
+                  ${rows}
+                </div>
+              </div>`;
+          } catch (err) {
+            listOut.innerHTML = `<div class="status err"><h3>Test failed</h3><p>${escapeHtml(err.message)}</p></div>`;
+          } finally {
+            listBtn.disabled = false;
+            listBtn.textContent = 'List models';
+          }
+        });
+
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          btn.textContent = 'Testing...';
+          out.style.display = 'block';
+          out.innerHTML = '<div style="color:var(--muted);">Pinging /health/llm...</div>';
+
+          try {
+            const res = await fetch('/health/llm');
+            const j = await res.json();
+            const provider = j.provider || '(none — running in local mode)';
+            const live = j.live_call_succeeded;
+
+            const lines = [
+              row('active provider', provider, !!j.provider),
+              row('anthropic SDK installed', j.anthropic_sdk_installed, j.anthropic_sdk_installed),
+              row('anthropic key set', j.anthropic_key_set, j.anthropic_key_set),
+              row('google SDK installed', j.google_sdk_name || j.google_sdk_installed, j.google_sdk_installed),
+              row('google key set', j.google_key_set, j.google_key_set),
+              row('live API call', live ? 'succeeded' : 'failed / skipped', live),
+            ];
+            if (j.live_call_response) {
+              lines.push(row('test reply', j.live_call_response, true));
+            }
+
+            // Surface the actual provider error if the live call failed.
+            const errorBlock = (!live && j.last_error)
+              ? `<div style="margin-top: 12px; padding: 10px 12px;
+                              background: #2a1818; border: 1px solid #4a2c2c;
+                              border-radius: 6px;">
+                   <div style="color: var(--err); font-size: 12px;
+                                text-transform: uppercase; letter-spacing: 0.05em;
+                                margin-bottom: 6px;">Provider error</div>
+                   <code style="color: var(--ink); font-size: 12.5px;
+                                white-space: pre-wrap; word-break: break-word;">${escapeHtml(j.last_error)}</code>
+                 </div>`
+              : '';
+
+            out.innerHTML = `
+              <div class="status ${j.is_available && live ? 'ok' : 'err'}">
+                <h3>${j.is_available && live ? 'LLM is connected' : 'No live LLM connection'}</h3>
+                <div style="font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; line-height: 1.9;">
+                  ${lines.join('')}
+                </div>
+                ${errorBlock}
+              </div>`;
+          } catch (err) {
+            out.innerHTML = `<div class="status err"><h3>Test failed</h3><p>${err.message}</p></div>`;
+          } finally {
+            btn.disabled = false;
+            btn.textContent = 'Test connection';
+          }
+        });
+      })();
+    </script>
+  </main>
+</body>
+</html>

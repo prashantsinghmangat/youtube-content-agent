@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat)",
+      "Bash(.venv/Scripts/python.exe _ui_check.py)",
+      "Bash(rm _ui_check.py)"
+    ]
+  }
+}
